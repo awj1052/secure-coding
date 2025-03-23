@@ -1,4 +1,3 @@
-#import sqlite3
 import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, flash, Blueprint
 from flask_socketio import SocketIO, send
@@ -8,6 +7,7 @@ import html
 
 from db import *
 import validate, filtering, spam
+import auth
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = ''
@@ -18,9 +18,11 @@ if os.path.exists('secret.txt'):
 DATABASE = 'market.db'
 socketio = SocketIO(app)
 
+app.register_blueprint(auth.auth)
+
 @app.teardown_appcontext
 def close_connection(exception):
-    close_db(app, exception)
+    close_db(exception)
 
 # 기본 라우트
 @app.route('/')
@@ -29,90 +31,12 @@ def index():
         return redirect(url_for('dashboard'))
     return render_template('index.html')
 
-# 회원가입
-@app.route('/register', methods=['GET', 'POST'])
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        if not validate.username(username):
-            flash('올바르지 않은 사용자명입니다.')
-            return redirect(url_for('register'))
-        password = request.form['password']
-        if not validate.password(password):
-            flash('올바르지 않은 비밀번호입니다.')
-            return redirect(url_for('register'))
-        confirm_password = request.form['confirm_password']
-        if password != confirm_password:
-            flash('비밀번호가 일치하지 않습니다.')
-            return redirect(url_for('register'))
-        
-        # 중복 사용자 체크
-        db = get_db(app)
-        cursor = db.cursor()
-        cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
-        if cursor.fetchone() is not None:
-            flash('이미 존재하는 사용자명입니다.')
-            return redirect(url_for('register'))
-
-        # 비밀번호를 bcrypt로 해시하기
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
-        # 사용자 ID 생성 (UUID 사용)
-        user_id = str(uuid.uuid4())
-
-        # 사용자 정보 DB에 저장 (해시된 비밀번호 사용)
-        cursor.execute("INSERT INTO user (id, username, password) VALUES (?, ?, ?)",
-                       (user_id, username, hashed_password))
-        db.commit()
-
-        flash('회원가입이 완료되었습니다. 로그인 해주세요.')
-        return redirect(url_for('login'))
-    
-    return render_template('register.html')
-
-# 로그인
-@app.route('/login', methods=['GET', 'POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        db = get_db(app)
-        cursor = db.cursor()
-        cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
-        user = cursor.fetchone()
-
-        if user:
-            # DB에 저장된 해시된 비밀번호 가져오기
-            stored_hash = user['password']
-            
-            # bcrypt로 입력한 비밀번호와 저장된 해시된 비밀번호 비교
-            if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
-                # 비밀번호가 일치하면 세션 설정
-                session['user_id'] = user['id']
-                flash('로그인 성공!')
-                return redirect(url_for('dashboard'))
-            else:
-                flash('아이디 또는 비밀번호가 올바르지 않습니다.')
-        else:
-            flash('아이디 또는 비밀번호가 올바르지 않습니다.')
-
-        return redirect(url_for('login'))
-
-    return render_template('login.html')
-
-# 로그아웃
-@app.route('/logout')
-def logout():
-    session.pop('user_id', None)
-    flash('로그아웃되었습니다.')
-    return redirect(url_for('index'))
-
 # 대시보드: 사용자 정보와 전체 상품 리스트 표시
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
         return redirect(url_for('login'))
-    db = get_db(app)
+    db = get_db()
     cursor = db.cursor()
     # 현재 사용자 조회
     cursor.execute("SELECT * FROM user WHERE id = ?", (session['user_id'],))
@@ -130,7 +54,7 @@ def profile(username=None):
     if 'user_id' not in session:
         return redirect(url_for('login'))
 
-    db = get_db(app)
+    db = get_db()
     cursor = db.cursor()    
 
     # 프로필을 볼 사용자를 결정
@@ -176,7 +100,7 @@ def new_product():
         else:
             flash('가격은 양의 정수여야 합니다.')
             return render_template('new_product.html')
-        db = get_db(app)
+        db = get_db()
         cursor = db.cursor()
         product_id = str(uuid.uuid4())
         cursor.execute(
@@ -191,7 +115,7 @@ def new_product():
 # 상품 상세보기
 @app.route('/product/<product_id>')
 def view_product(product_id):
-    db = get_db(app)
+    db = get_db()
     cursor = db.cursor()
     cursor.execute("SELECT * FROM product WHERE id = ?", (product_id,))
     product = cursor.fetchone()
@@ -211,7 +135,7 @@ def report():
     if request.method == 'POST':
         target_id = request.form['target_id']
         reason = request.form['reason']
-        db = get_db(app)
+        db = get_db()
         cursor = db.cursor()
         report_id = str(uuid.uuid4())
         cursor.execute(
@@ -228,7 +152,7 @@ def change_pw():
     if 'user_id' not in session:
         return redirect(url_for('login'))
     user_id = session['user_id']
-    db = get_db(app)
+    db = get_db()
     cursor = db.cursor()
     cursor.execute("SELECT * FROM user WHERE id = ?", (user_id,))
     user = cursor.fetchone()
@@ -278,7 +202,7 @@ def handle_send_message_event(data):
         send(message_data, broadcast=False)
         return
 
-    db = get_db(app)
+    db = get_db()
     cursor = db.cursor()
     cursor.execute("SELECT username FROM user WHERE id = ?", (user_id,))
     user = cursor.fetchone()
