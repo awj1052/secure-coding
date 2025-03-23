@@ -162,20 +162,41 @@ def dashboard():
 
 # 프로필 페이지: bio 업데이트 가능
 @app.route('/profile', methods=['GET', 'POST'])
-def profile():
+@app.route('/profile/<username>', methods=['GET', 'POST'])
+def profile(username=None):
+    # 로그인 체크
     if 'user_id' not in session:
         return redirect(url_for('login'))
+
     db = get_db()
-    cursor = db.cursor()
+    cursor = db.cursor()    
+    
+    # 프로필을 볼 사용자를 결정
+    user = None
+    if username is None:
+        user_id = session['user_id']  # 로그인한 사용자의 프로필을 기본값으로 설정
+        cursor.execute("SELECT * FROM user WHERE id = ?", (user_id,))
+        user = cursor.fetchone()
+    else:
+        cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
+        user = cursor.fetchone()
+    
+    if user is None:
+        flash('사용자를 찾을 수 없습니다.')
+        return redirect(url_for('profile'))  # 잘못된 사용자 ID로 접근할 경우 로그인된 사용자 프로필로 돌아가기
+    
+    # 프로필 수정 처리
     if request.method == 'POST':
+        if username is not None:
+            flash("다른 사용자의 소개글은 수정할 수 없습니다.")
+            return redirect(url_for('profile', username=username)) 
         bio = request.form.get('bio', '')
         cursor.execute("UPDATE user SET bio = ? WHERE id = ?", (bio, session['user_id']))
         db.commit()
         flash('프로필이 업데이트되었습니다.')
-        return redirect(url_for('profile'))
-    cursor.execute("SELECT * FROM user WHERE id = ?", (session['user_id'],))
-    current_user = cursor.fetchone()
-    return render_template('profile.html', user=current_user)
+        return redirect(url_for('profile'))  # 로그인한 사용자의 프로필로 리다이렉트
+    
+    return render_template('profile.html', user=user)
 
 # 상품 등록
 @app.route('/product/new', methods=['GET', 'POST'])
