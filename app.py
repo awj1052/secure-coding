@@ -5,7 +5,7 @@ from flask_socketio import SocketIO, send
 import os
 import bcrypt
 
-import validate
+import validate, filtering
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = ''
@@ -170,7 +170,7 @@ def profile(username=None):
 
     db = get_db()
     cursor = db.cursor()    
-    
+
     # 프로필을 볼 사용자를 결정
     user = None
     if username is None:
@@ -265,6 +265,7 @@ def report():
 @socketio.on('send_message')
 def handle_send_message_event(data):
     data['message_id'] = str(uuid.uuid4())
+    if not filtering.is_message_safe(data['message']): return
     send(data, broadcast=True)
 
 if __name__ == '__main__':
