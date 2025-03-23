@@ -5,6 +5,8 @@ from flask_socketio import SocketIO, send
 import os
 import bcrypt
 
+import validate
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = ''
 DATABASE = 'market.db'
@@ -74,7 +76,13 @@ def index():
 def register():
     if request.method == 'POST':
         username = request.form['username']
+        if not validate.username(username):
+            flash('올바르지 않은 사용자명입니다.')
+            return redirect(url_for('register'))
         password = request.form['password']
+        if not validate.password(password):
+            flash('올바르지 않은 비밀번호입니다.')
+            return redirect(url_for('register'))
         
         # 중복 사용자 체크
         db = get_db()
