@@ -2,7 +2,6 @@ import bcrypt
 import uuid
 from flask import render_template, request, session, flash, redirect, url_for, Blueprint
 from db import get_db
-import validate
 
 auth = Blueprint('auth', __name__)
 
@@ -10,11 +9,11 @@ auth = Blueprint('auth', __name__)
 def register():
     if request.method == 'POST':
         username = request.form['username']
-        if not validate.username(username):
+        if not check_username(username):
             flash('올바르지 않은 사용자명입니다.')
             return redirect(url_for('auth.register'))
         password = request.form['password']
-        if not validate.password(password):
+        if not check_password(password):
             flash('올바르지 않은 비밀번호입니다.')
             return redirect(url_for('auth.register'))
         confirm_password = request.form['confirm_password']
@@ -82,3 +81,13 @@ def logout():
     session.pop('user_id', None)
     flash('로그아웃되었습니다.')
     return redirect(url_for('index'))
+
+import re
+
+def check_username(username):
+    pattern = r'^[a-zA-Z0-9-_]{3,20}$'
+    return re.match(pattern, username)
+
+def check_password(password):
+    pattern = r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).{8,20}$'
+    return re.match(pattern, password)
