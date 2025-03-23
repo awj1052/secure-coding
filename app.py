@@ -178,6 +178,13 @@ def new_product():
         title = request.form['title']
         description = request.form['description']
         price = request.form['price']
+        if price.isdigit() and int(price) > 0:
+            # 가격이 양의 정수일 경우 처리
+            price = int(price)
+            # 상품 등록 코드
+        else:
+            flash('가격은 양의 정수여야 합니다.')
+            return render_template('new_product.html')
         db = get_db()
         cursor = db.cursor()
         product_id = str(uuid.uuid4())
