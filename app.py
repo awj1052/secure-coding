@@ -1,13 +1,13 @@
 import uuid
-from flask import Flask, render_template, request, redirect, url_for, session, flash, Blueprint
+from flask import Flask, render_template, request, redirect, url_for, session, flash, Blueprint, abort
 from flask_socketio import SocketIO, send
 import os
 import bcrypt
 import html
 
 from db import *
-import auth, product
-import validate, filtering, spam
+import auth, product, report
+import filtering, spam
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = ''
@@ -20,10 +20,22 @@ socketio = SocketIO(app)
 
 app.register_blueprint(auth.auth)
 app.register_blueprint(product.product)
+app.register_blueprint(report.report)
 
 @app.teardown_appcontext
 def close_connection(exception):
     close_db(exception)
+
+@app.before_request
+def check_spam():
+    ip = get_client_ip()
+    if spam.is_spam(ip):
+        abort(429, description="Too Many Requests - You are being rate-limited.")
+
+def get_client_ip():
+    if request.headers.get('X-Forwarded-For'):
+        return request.headers.get('X-Forwarded-For').split(',')[0]  # 첫 번째 IP가 실제 클라이언트 IP
+    return request.headers.get('X-Real-IP') or request.remote_addr
 
 # 기본 라우트
 @app.route('/')
@@ -42,6 +54,8 @@ def dashboard():
     # 현재 사용자 조회
     cursor.execute("SELECT * FROM user WHERE id = ?", (session['user_id'],))
     current_user = cursor.fetchone()
+    if current_user is None:
+        return redirect(url_for('auth.login'))
     # 모든 상품 조회
     cursor.execute("SELECT * FROM product")
     all_products = cursor.fetchall()
@@ -84,26 +98,6 @@ def profile(username=None):
         return redirect(url_for('profile'))  # 로그인한 사용자의 프로필로 리다이렉트
     
     return render_template('profile.html', user=user)
-
-# 신고하기
-@app.route('/report', methods=['GET', 'POST'])
-def report():
-    if 'user_id' not in session:
-        return redirect(url_for('auth.login'))
-    if request.method == 'POST':
-        target_id = request.form['target_id']
-        reason = request.form['reason']
-        db = get_db()
-        cursor = db.cursor()
-        report_id = str(uuid.uuid4())
-        cursor.execute(
-            "INSERT INTO report (id, reporter_id, target_id, reason) VALUES (?, ?, ?, ?)",
-            (report_id, session['user_id'], target_id, reason)
-        )
-        db.commit()
-        flash('신고가 접수되었습니다.')
-        return redirect(url_for('dashboard'))
-    return render_template('report.html')
 
 @app.route('/changePassword', methods=['GET', 'POST'])
 def change_pw():

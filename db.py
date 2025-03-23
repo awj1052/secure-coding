@@ -37,8 +37,9 @@ def init_db(app):
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT NOT NULL,
-                price TEXT NOT NULL,
-                seller_id TEXT NOT NULL
+                price INTEGER NOT NULL,
+                seller_id TEXT NOT NULL,
+                FOREIGN KEY (seller_id) REFERENCES user(id) ON DELETE CASCADE
             )
         """)
         # 신고 테이블 생성
@@ -47,7 +48,9 @@ def init_db(app):
                 id TEXT PRIMARY KEY,
                 reporter_id TEXT NOT NULL,
                 target_id TEXT NOT NULL,
-                reason TEXT NOT NULL
+                reason TEXT NOT NULL,
+                FOREIGN KEY (reporter_id) REFERENCES user(id) ON DELETE CASCADE,
+                FOREIGN KEY (target_id) REFERENCES user(id) ON DELETE CASCADE
             )
         """)
         db.commit()

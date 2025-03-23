@@ -90,7 +90,7 @@
     {% if session.get('user_id') %}
       <a href="{{ url_for('dashboard') }}">대시보드</a>
       <a href="{{ url_for('profile') }}">프로필</a>
-      <a href="{{ url_for('report') }}">신고하기</a>
+      <a href="{{ url_for('report.reporting') }}">신고하기</a>
       <a href="{{ url_for('auth.logout') }}">로그아웃</a>
     {% else %}
       <a href="{{ url_for('auth.login') }}">로그인</a>

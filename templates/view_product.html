@@ -1,8 +1,27 @@
 {% extends "base.html" %}
 {% block title %}상품 상세보기{% endblock %}
 {% block content %}
+{% if session['user_id'] == seller.id %}
+<form method="post" action="{{ url_for('product.modify', product_id=product.id) }}">
+    <input type="hidden" name="_method" value="PUT">
+
+    제목: <input type="text" name="title" value="{{ product.title }}" required><br>
+    설명: <br>
+    <textarea name="description" rows="4" cols="50" required>{{ product.description }}</textarea><br>
+    가격: <input type="number" name="price" value="{{ product.price }}" min="0" required><br>
+
+    <button type="submit">수정</button>
+</form>
+
+<form method="post" action="{{ url_for('product.modify', product_id=product.id) }}">
+    <input type="hidden" name="_method" value="DELETE">
+
+    <button type="submit">삭제</button>
+</form>
+{% else %}
 <h2>{{ product.title }}</h2>
 <p>{{ product.description }}</p>
 <p>가격: {{ product.price }}</p>
 <p>판매자: {{ seller.username if seller else '알 수 없음' }}</p>
+{% endif %}
 {% endblock %}
