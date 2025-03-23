@@ -7,7 +7,7 @@ import html
 
 from db import *
 from admin import *
-import auth, product, report
+import auth, product, report, chat
 import filtering, spam
 
 app = Flask(__name__)
@@ -22,6 +22,7 @@ socketio = SocketIO(app)
 app.register_blueprint(auth.auth)
 app.register_blueprint(product.product)
 app.register_blueprint(report.report)
+app.register_blueprint(chat.chat)
 
 @app.teardown_appcontext
 def close_connection(exception):
@@ -96,7 +97,7 @@ def profile(username=None):
         db.commit()
         flash('프로필이 업데이트되었습니다.')
         return redirect(url_for('profile'))  # 로그인한 사용자의 프로필로 리다이렉트
-    
+
     return render_template('profile.html', user=user)
 
 @app.route('/changePassword', methods=['GET', 'POST'])

@@ -1,24 +1,8 @@
 {% extends "base.html" %}
-{% block title %}대시보드{% endblock %}
-{% block content %}
-<h2>대시보드</h2>
-<h3>채팅하기</h3>
-<form method="post" action="{{ url_for('chat.chat_page')}}">
-  이름: <input type="text" name="target" value="" required><br>
-  <button type="submit">채팅시작</button>
-</form>
-<h3>등록된 상품</h3>
-<ul>
-  {% for product in products %}
-    <li>
-      <a href="{{ url_for('product.view', product_id=product.id) }}">{{ product.title }}</a>
-      - 가격: {{ product.price }}
-    </li>
-  {% endfor %}
-</ul>
-<p><a href="{{ url_for('product.new') }}">새 상품 등록</a></p>
+{% block title %}1대1 채팅{% endblock %}
 
-<h3>실시간 채팅</h3>
+{% block content %}
+<h3>{{ chat_partner.username }}님과의 채팅</h3>
 <div id="chat">
   <ul id="messages"></ul>
   <input id="chat_input" type="text" placeholder="메시지를 입력하세요">
@@ -30,10 +14,15 @@
   if (socket) {
     socket.disconnect();
   }
-  socket = io();
+  socket = io('localhost:5000/chat', {
+    transports: ['websocket'], // 웹소켓만 사용
+    query: { room: '{{ room_id }}' }    // 서버로 전송할 추가 쿼리 파라미터
+  });
   socket.on('connect', function() {
     console.log("채팅 서버에 연결됨");
+    socket.emit('join_room', { 'room': "{{ room_id }}" });
   });
+
   socket.on('message', function(data) {
     var messages = document.getElementById('messages');
     var item = document.createElement('li');
@@ -41,11 +30,16 @@
     messages.appendChild(item);
     window.scrollTo(0, document.body.scrollHeight);
   });
+
   function sendMessage() {
     var input = document.getElementById('chat_input');
     var message = input.value;
     if (message) {
-      socket.emit('send_message', { 'username': "{{ user.username }}", 'message': message });
+      socket.emit('send_message_private', {
+        'room': "{{ room_id }}",
+        'username': "{{ user.username }}",
+        'message': message
+      });
       input.value = "";
     }
   }
