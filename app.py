@@ -3,6 +3,7 @@ import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 from flask_socketio import SocketIO, send
 import os
+import bcrypt
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = ''
@@ -74,19 +75,29 @@ def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        
+        # 중복 사용자 체크
         db = get_db()
         cursor = db.cursor()
-        # 중복 사용자 체크
         cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
         if cursor.fetchone() is not None:
             flash('이미 존재하는 사용자명입니다.')
             return redirect(url_for('register'))
+
+        # 비밀번호를 bcrypt로 해시하기
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+        # 사용자 ID 생성 (UUID 사용)
         user_id = str(uuid.uuid4())
+
+        # 사용자 정보 DB에 저장 (해시된 비밀번호 사용)
         cursor.execute("INSERT INTO user (id, username, password) VALUES (?, ?, ?)",
-                       (user_id, username, password))
+                       (user_id, username, hashed_password))
         db.commit()
+
         flash('회원가입이 완료되었습니다. 로그인 해주세요.')
         return redirect(url_for('login'))
+    
     return render_template('register.html')
 
 # 로그인
@@ -97,15 +108,26 @@ def login():
         password = request.form['password']
         db = get_db()
         cursor = db.cursor()
-        cursor.execute("SELECT * FROM user WHERE username = ? AND password = ?", (username, password))
+        cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
         user = cursor.fetchone()
+
         if user:
-            session['user_id'] = user['id']
-            flash('로그인 성공!')
-            return redirect(url_for('dashboard'))
+            # DB에 저장된 해시된 비밀번호 가져오기
+            stored_hash = user['password']
+            
+            # bcrypt로 입력한 비밀번호와 저장된 해시된 비밀번호 비교
+            if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+                # 비밀번호가 일치하면 세션 설정
+                session['user_id'] = user['id']
+                flash('로그인 성공!')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('아이디 또는 비밀번호가 올바르지 않습니다.')
         else:
             flash('아이디 또는 비밀번호가 올바르지 않습니다.')
-            return redirect(url_for('login'))
+
+        return redirect(url_for('login'))
+
     return render_template('login.html')
 
 # 로그아웃
