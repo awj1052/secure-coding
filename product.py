@@ -1,6 +1,7 @@
 import uuid
 from flask import render_template, request, session, flash, redirect, url_for, Blueprint
 from db import get_db
+from admin import ADMIN
 
 product = Blueprint('product', __name__)
 
@@ -45,7 +46,7 @@ def view(product_id):
     # 판매자 정보 조회
     cursor.execute("SELECT * FROM user WHERE id = ?", (product['seller_id'],))
     seller = cursor.fetchone()
-    return render_template('view_product.html', product=product, seller=seller)
+    return render_template('view_product.html', product=product, seller=seller, ADMIN=ADMIN)
 
 # 상품 수정하기
 @product.route('/product/modify/<product_id>', methods=['GET', 'POST'])
@@ -58,7 +59,7 @@ def modify(product_id):
     cursor.execute("SELECT * FROM product WHERE id = ?", (product_id,))
     product = cursor.fetchone()
     if not product or \
-        product['seller_id'] != user_id or \
+        user_id != product['seller_id'] or user_id != ADMIN or \
         not method in ['PUT', 'DELETE']:
         flash("권한이 없습니다.")
         return redirect(request.referrer) 

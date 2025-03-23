@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}신고 목록{% endblock %}
+
+{% block content %}
+<form method="post" action="{{ url_for('report.remove') }}">
+    유저 ID: <input type="text" name="target_id" value="" required><br>
+    <button type="submit">삭제</button>
+</form>
+<h2>신고 목록</h2>
+<table border="1">
+    <tr>
+        <th>신고자</th>
+        <th>대상</th>
+        <th>사유</th>
+    </tr>
+    {% for report in reports %}
+    <tr>
+        <td>{{ report.reporter_id }}</td>
+        <td>{{ report.target_id }}</td>
+        <td>{{ report.reason }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

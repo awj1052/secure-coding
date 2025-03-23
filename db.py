@@ -9,6 +9,7 @@ def get_db():
     if db is None:
         db = g._database = sqlite3.connect(DATABASE)
         db.row_factory = sqlite3.Row  # 결과를 dict처럼 사용하기 위함
+        db.execute("PRAGMA foreign_keys = ON;")  # FOREIGN KEY 활성화
     return db
 
 # 애플리케이션 종료 시 데이터베이스 연결 닫기
@@ -50,7 +51,7 @@ def init_db(app):
                 target_id TEXT NOT NULL,
                 reason TEXT NOT NULL,
                 FOREIGN KEY (reporter_id) REFERENCES user(id) ON DELETE CASCADE,
-                FOREIGN KEY (target_id) REFERENCES user(id) ON DELETE CASCADE
+                FOREIGN KEY (target_id) REFERENCES user(username) ON DELETE CASCADE
             )
         """)
         db.commit()

@@ -6,6 +6,7 @@ import bcrypt
 import html
 
 from db import *
+from admin import *
 import auth, product, report
 import filtering, spam
 
@@ -75,8 +76,7 @@ def profile(username=None):
     # 프로필을 볼 사용자를 결정
     user = None
     if username is None:
-        user_id = session['user_id']  # 로그인한 사용자의 프로필을 기본값으로 설정
-        cursor.execute("SELECT * FROM user WHERE id = ?", (user_id,))
+        cursor.execute("SELECT * FROM user WHERE id = ?", (session['user_id'],)) # 로그인한 사용자의 프로필을 기본값으로 설정
         user = cursor.fetchone()
     else:
         cursor.execute("SELECT * FROM user WHERE username = ?", (username,))
