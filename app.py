@@ -1,11 +1,12 @@
 import sqlite3
 import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
-from flask_socketio import SocketIO, send
+from flask_socketio import SocketIO, send, disconnect, emit
 import os
 import bcrypt
+import html
 
-import validate, filtering
+import validate, filtering, spam
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = ''
@@ -303,9 +304,44 @@ def change_pw():
 # 실시간 채팅: 클라이언트가 메시지를 보내면 전체 브로드캐스트
 @socketio.on('send_message')
 def handle_send_message_event(data):
-    data['message_id'] = str(uuid.uuid4())
-    if not filtering.is_message_safe(data['message']): return
-    send(data, broadcast=True)
+    if 'user_id' not in session:
+        return
+    
+    user_id = session['user_id']
+    if spam.is_spam(user_id): 
+        message_data = {
+            'message_id': str(uuid.uuid4()),
+            'username': '[SYSTEM]',
+            'message': '메세지를 천천히 보내세요.'
+        }
+        send(message_data, broadcast=False)
+        return
+
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT username FROM user WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+
+    if not user:
+        return 
+
+    message = data.get('message', '').strip()
+    if not message or len(message) > 100:
+        message_data = {
+            'message_id': str(uuid.uuid4()),
+            'username': '[SYSTEM]',
+            'message': '한 번에 많은 메세지를 보낼 수 없습니다.'
+        }
+        send(message_data, broadcast=False)
+        return  # 빈 메시지 또는 너무 긴 메시지는 차단
+
+    safe_message = html.escape(message)  # HTML 태그 및 XSS 방어
+    message_data = {
+        'message_id': str(uuid.uuid4()),
+        'username': user['username'],
+        'message': safe_message
+    }
+    send(message_data, broadcast=True)
 
 if __name__ == '__main__':
     init_db()  # 앱 컨텍스트 내에서 테이블 생성
