@@ -8,6 +8,7 @@ import html
 from db import *
 from admin import *
 import auth, product, report, chat
+from socketio_instance import socketio
 import filtering, spam
 
 app = Flask(__name__)
@@ -17,12 +18,13 @@ if os.path.exists('secret.txt'):
         app.config['SECRET_KEY'] = f.read().strip()
 
 DATABASE = 'market.db'
-socketio = SocketIO(app)
 
 app.register_blueprint(auth.auth)
 app.register_blueprint(product.product)
 app.register_blueprint(report.report)
 app.register_blueprint(chat.chat)
+
+socketio.init_app(app, manage_session=True)
 
 @app.teardown_appcontext
 def close_connection(exception):

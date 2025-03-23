@@ -5,8 +5,8 @@ from collections import defaultdict
 request_counter = defaultdict(list)
 
 # 스팸 방지 설정
-MAX_MESSAGES = 100       # 제한 메시지 개수
-TIME_WINDOW = 60         # 제한 시간 (초)
+MAX_MESSAGES = 2       # 제한 메시지 개수
+TIME_WINDOW = 5         # 제한 시간 (초)
 
 def is_spam(ip):
     current_time = time.time()
