@@ -2,11 +2,15 @@ import sqlite3
 import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
 from flask_socketio import SocketIO, send
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
+app.config['SECRET_KEY'] = ''
 DATABASE = 'market.db'
 socketio = SocketIO(app)
+if os.path.exists('secret.txt'):
+    with open('secret.txt', "r") as f:
+        app.config['SECRET_KEY'] = f.read().strip()
 
 # 데이터베이스 연결 관리: 요청마다 연결 생성 후 사용, 종료 시 close
 def get_db():
