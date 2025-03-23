@@ -6,8 +6,8 @@ import bcrypt
 import html
 
 from db import *
+import auth, product
 import validate, filtering, spam
-import auth
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = ''
@@ -19,6 +19,7 @@ DATABASE = 'market.db'
 socketio = SocketIO(app)
 
 app.register_blueprint(auth.auth)
+app.register_blueprint(product.product)
 
 @app.teardown_appcontext
 def close_connection(exception):
@@ -35,7 +36,7 @@ def index():
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     db = get_db()
     cursor = db.cursor()
     # 현재 사용자 조회
@@ -52,7 +53,7 @@ def dashboard():
 def profile(username=None):
     # 로그인 체크
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
 
     db = get_db()
     cursor = db.cursor()    
@@ -84,54 +85,11 @@ def profile(username=None):
     
     return render_template('profile.html', user=user)
 
-# 상품 등록
-@app.route('/product/new', methods=['GET', 'POST'])
-def new_product():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        title = request.form['title']
-        description = request.form['description']
-        price = request.form['price']
-        if price.isdigit() and int(price) > 0:
-            # 가격이 양의 정수일 경우 처리
-            price = int(price)
-            # 상품 등록 코드
-        else:
-            flash('가격은 양의 정수여야 합니다.')
-            return render_template('new_product.html')
-        db = get_db()
-        cursor = db.cursor()
-        product_id = str(uuid.uuid4())
-        cursor.execute(
-            "INSERT INTO product (id, title, description, price, seller_id) VALUES (?, ?, ?, ?, ?)",
-            (product_id, title, description, price, session['user_id'])
-        )
-        db.commit()
-        flash('상품이 등록되었습니다.')
-        return redirect(url_for('dashboard'))
-    return render_template('new_product.html')
-
-# 상품 상세보기
-@app.route('/product/<product_id>')
-def view_product(product_id):
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute("SELECT * FROM product WHERE id = ?", (product_id,))
-    product = cursor.fetchone()
-    if not product:
-        flash('상품을 찾을 수 없습니다.')
-        return redirect(url_for('dashboard'))
-    # 판매자 정보 조회
-    cursor.execute("SELECT * FROM user WHERE id = ?", (product['seller_id'],))
-    seller = cursor.fetchone()
-    return render_template('view_product.html', product=product, seller=seller)
-
 # 신고하기
 @app.route('/report', methods=['GET', 'POST'])
 def report():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     if request.method == 'POST':
         target_id = request.form['target_id']
         reason = request.form['reason']
@@ -150,7 +108,7 @@ def report():
 @app.route('/changePassword', methods=['GET', 'POST'])
 def change_pw():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('auth.login'))
     user_id = session['user_id']
     db = get_db()
     cursor = db.cursor()
