@@ -84,6 +84,10 @@ def register():
         if not validate.password(password):
             flash('올바르지 않은 비밀번호입니다.')
             return redirect(url_for('register'))
+        confirm_password = request.form['confirm_password']
+        if password != confirm_password:
+            flash('비밀번호가 일치하지 않습니다.')
+            return redirect(url_for('register'))
         
         # 중복 사용자 체크
         db = get_db()
