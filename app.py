@@ -1,7 +1,7 @@
 import sqlite3
 import uuid
 from flask import Flask, render_template, request, redirect, url_for, session, flash, g
-from flask_socketio import SocketIO, send, disconnect, emit
+from flask_socketio import SocketIO, send
 import os
 import bcrypt
 import html
