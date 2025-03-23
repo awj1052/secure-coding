@@ -261,6 +261,45 @@ def report():
         return redirect(url_for('dashboard'))
     return render_template('report.html')
 
+@app.route('/changePassword', methods=['GET', 'POST'])
+def change_pw():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user_id = session['user_id']
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute("SELECT * FROM user WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+
+    # 비밀번호 변경 처리
+    if request.method == 'POST':
+        current_password = request.form['current_password']
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+
+        # 현재 비밀번호 확인
+        if not bcrypt.checkpw(current_password.encode('utf-8'), user['password']):
+            flash('현재 비밀번호가 올바르지 않습니다.')
+            return redirect(url_for('change_pw'))
+        if not validate.password(new_password):
+            flash('올바르지 않은 비밀번호입니다.')
+            return redirect(url_for('change_pw'))
+        # 새로운 비밀번호 확인
+        if new_password != confirm_password:
+            flash('새로운 비밀번호가 일치하지 않습니다.')
+            return redirect(url_for('change_pw'))
+
+        # 새로운 비밀번호 해싱 후 저장
+        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+        cursor.execute("UPDATE user SET password = ? WHERE id = ?", (hashed_password, user_id))
+        db.commit()
+
+        session.pop('user_id', None)
+        flash('비밀번호가 변경되어 로그아웃 됩니다.')
+        return redirect(url_for('index'))
+
+    return render_template('change_pw.html', user=user)
+
 # 실시간 채팅: 클라이언트가 메시지를 보내면 전체 브로드캐스트
 @socketio.on('send_message')
 def handle_send_message_event(data):
