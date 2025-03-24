@@ -60,10 +60,18 @@ def dashboard():
     current_user = cursor.fetchone()
     if current_user is None:
         return redirect(url_for('auth.login'))
-    # 모든 상품 조회
-    cursor.execute("SELECT * FROM product")
+
+    # GET 요청에서 keyword 가져오기
+    keyword = request.args.get('keyword', '')
+
+    # 모든 상품 조회 (필터 적용)
+    if keyword != '':
+        cursor.execute("SELECT * FROM product WHERE (title LIKE ?) OR (description LIKE ?)", (keyword, keyword))
+    else:
+        cursor.execute("SELECT * FROM product")
+    
     all_products = cursor.fetchall()
-    return render_template('dashboard.html', products=all_products, user=current_user)
+    return render_template('dashboard.html', products=all_products, user=current_user, product_count=len(all_products))
 
 # 프로필 페이지: bio 업데이트 가능
 @app.route('/profile', methods=['GET', 'POST'])
