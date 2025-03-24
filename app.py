@@ -9,7 +9,7 @@ from db import *
 from admin import *
 import auth, product, report, chat
 from socketio_instance import socketio
-import filtering, spam
+import spam
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = ''
