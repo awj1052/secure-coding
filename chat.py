@@ -45,15 +45,15 @@ def handle_connect():
     if 'user_id' not in session:
         return False  # 인증 안되면 연결 거부
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    print(f"Disconnected: {session.get('user_id')}")
+# @socketio.on('disconnect')
+# def handle_disconnect():
+    # print(f"Disconnected: {session.get('user_id')}")
 
 @socketio.on('join_room')
 def handle_join_room_event(data):
     room = data.get('room')
     join_room(room)
-    print(f"Joined room: {room}")
+    # print(f"Joined room: {room}")
 
 @socketio.on('send_message_private')
 def handle_send_message_private(data):

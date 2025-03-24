@@ -38,7 +38,7 @@ def init_db(app):
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
                 description TEXT NOT NULL,
-                price INTEGER NOT NULL,
+                price INTEGER NOT NULL CHECK (price >= 0),
                 seller_id TEXT NOT NULL,
                 FOREIGN KEY (seller_id) REFERENCES user(id) ON DELETE CASCADE
             )
